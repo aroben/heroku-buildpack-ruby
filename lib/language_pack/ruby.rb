@@ -18,6 +18,8 @@ class LanguagePack::Ruby < LanguagePack::Base
   JVM_BASE_URL         = "http://heroku-jdk.s3.amazonaws.com"
   LATEST_JVM_VERSION   = "openjdk7-latest"
   LEGACY_JVM_VERSION   = "openjdk1.7.0_25"
+  CMAKE_BASE_URL       = "http://www.cmake.org/files"
+  CMAKE_VERSION        = "3.0.2"
   DEFAULT_RUBY_VERSION = "ruby-2.0.0"
   RBX_BASE_URL         = "http://binaries.rubini.us/heroku"
   NODE_BP_PATH         = "vendor/node/bin"
@@ -43,6 +45,7 @@ class LanguagePack::Ruby < LanguagePack::Base
     @fetchers[:mri]    = LanguagePack::Fetcher.new(VENDOR_URL, @stack)
     @fetchers[:jvm]    = LanguagePack::Fetcher.new(JVM_BASE_URL)
     @fetchers[:rbx]    = LanguagePack::Fetcher.new(RBX_BASE_URL, @stack)
+    @fetchers[:cmake]  = LanguagePack::Fetcher.new(CMAKE_BASE_URL)
     @node_installer    = LanguagePack::NodeInstaller.new(@stack)
   end
 
@@ -87,6 +90,7 @@ class LanguagePack::Ruby < LanguagePack::Base
       remove_vendor_bundle
       install_ruby
       install_jvm
+      install_cmake
       setup_language_pack_environment
       setup_profiled
       allow_git do
@@ -159,6 +163,10 @@ private
   # @return [String] resulting path
   def slug_vendor_jvm
     "vendor/jvm"
+  end
+
+  def slug_vendor_cmake
+    "vendor/cmake"
   end
 
   # the absolute path of the build ruby to use during the buildpack
@@ -341,6 +349,22 @@ ERROR
         Dir["#{slug_vendor_jvm}/bin/*"].each do |bin|
           run("ln -s ../#{bin} #{bin_dir}")
         end
+      end
+    end
+  end
+
+  def install_cmake
+    topic "Installing CMake"
+
+    FileUtils.mkdir_p(slug_vendor_cmake)
+    install_dir = File.join(Dir.pwd, slug_vendor_cmake)
+    Dir.mktmpdir("cmake-") do |tmpdir|
+      major_minor = CMAKE_VERSION.split(".", 3).take(2).join(".")
+      @fetchers[:cmake].fetch_untar("v#{major_minor}/cmake-#{CMAKE_VERSION}.tar.gz")
+      Dir.chdir("cmake-#{CMAKE_VERSION}") do
+        run!("./bootstrap --prefix=\"#{install_dir}\"")
+        run!("make")
+        run!("make install")
       end
     end
   end
