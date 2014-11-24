@@ -356,17 +356,22 @@ ERROR
   def install_cmake
     topic "Installing CMake"
 
-    FileUtils.mkdir_p(slug_vendor_cmake)
-    install_dir = File.join(Dir.pwd, slug_vendor_cmake)
-    Dir.mktmpdir("cmake-") do |tmpdir|
-      major_minor = CMAKE_VERSION.split(".", 3).take(2).join(".")
-      @fetchers[:cmake].fetch_untar("v#{major_minor}/cmake-#{CMAKE_VERSION}.tar.gz")
-      Dir.chdir("cmake-#{CMAKE_VERSION}") do
-        run!("./bootstrap --prefix=\"#{install_dir}\"")
-        run!("make")
-        run!("make install")
+    cache_dir = "cmake-#{CMAKE_VERSION}"
+    unless @cache.exists?(cache_dir)
+      Dir.mktmpdir("cmake-") do |tmpdir|
+        install_dir = File.join(tmpdir, cache_dir)
+        major_minor = CMAKE_VERSION.split(".", 3).take(2).join(".")
+        @fetchers[:cmake].fetch_untar("v#{major_minor}/cmake-#{CMAKE_VERSION}.tar.gz")
+        Dir.chdir("cmake-#{CMAKE_VERSION}") do
+          run!("./bootstrap --prefix=\"#{install_dir}\"")
+          run!("make")
+          run!("make install")
+        end
+        @cache.store(install_dir, cache_dir)
       end
     end
+
+    @cache.load(cache_dir, slug_vendor_cmake)
   end
 
   # find the ruby install path for its binstubs during build
