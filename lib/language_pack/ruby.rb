@@ -365,7 +365,7 @@ ERROR
         @fetchers[:cmake].fetch_untar("v#{major_minor}/cmake-#{CMAKE_VERSION}.tar.gz")
         Dir.chdir("cmake-#{CMAKE_VERSION}") do
           run!("./bootstrap --prefix=\"#{install_dir}\"")
-          run!("make")
+          run!("make -j4")
           run!("make install")
         end
         @cache.store(install_dir, cache_dir)
