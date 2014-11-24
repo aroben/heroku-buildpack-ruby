@@ -120,6 +120,7 @@ private
       system_paths,
     ]
     paths.unshift("#{slug_vendor_jvm}/bin") if ruby_version.jruby?
+    paths.unshift("#{Dir.pwd}/#{slug_vendor_cmake}/bin")
     paths.unshift(safe_binstubs)
 
     paths.join(":")
