@@ -51,6 +51,7 @@ class LanguagePack::Ruby < LanguagePack::Base
     @fetchers[:cmake]  = LanguagePack::Fetcher.new(CMAKE_BASE_URL)
     @fetchers[:icu4c]  = LanguagePack::Fetcher.new(ICU4C_BASE_URL)
     @node_installer    = LanguagePack::NodeInstaller.new(@stack)
+    @cmake_dir         = Dir.mktmpdir
   end
 
   def name
@@ -125,7 +126,7 @@ private
       system_paths,
     ]
     paths.unshift("#{slug_vendor_jvm}/bin") if ruby_version.jruby?
-    paths.unshift("#{Dir.pwd}/#{slug_vendor_cmake}/bin")
+    paths.unshift("#{@cmake_dir}/bin")
     paths.unshift(safe_binstubs)
 
     paths.join(":")
@@ -169,10 +170,6 @@ private
   # @return [String] resulting path
   def slug_vendor_jvm
     "vendor/jvm"
-  end
-
-  def slug_vendor_cmake
-    "vendor/cmake"
   end
 
   # the absolute path of the build ruby to use during the buildpack
@@ -369,17 +366,19 @@ ERROR
       Dir.mktmpdir("cmake-") do |tmpdir|
         install_dir = File.join(tmpdir, cache_dir)
         major_minor = CMAKE_VERSION.split(".", 3).take(2).join(".")
-        @fetchers[:cmake].fetch_untar("v#{major_minor}/cmake-#{CMAKE_VERSION}.tar.gz")
-        Dir.chdir("cmake-#{CMAKE_VERSION}") do
-          run!("./bootstrap --prefix=\"#{install_dir}\"")
-          run!("make -j4")
-          run!("make install")
+        Dir.chdir(tmpdir) do
+          @fetchers[:cmake].fetch_untar("v#{major_minor}/cmake-#{CMAKE_VERSION}.tar.gz")
+          Dir.chdir("cmake-#{CMAKE_VERSION}") do
+            run!("./bootstrap --prefix=\"#{install_dir}\"")
+            run!("make -j4")
+            run!("make install")
+          end
         end
         @cache.store(install_dir, cache_dir)
       end
     end
 
-    @cache.load(cache_dir, slug_vendor_cmake)
+    @cache.load(cache_dir, @cmake_dir)
   end
 
   # find the ruby install path for its binstubs during build
