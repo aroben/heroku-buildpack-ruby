@@ -23,7 +23,9 @@ class LanguagePack::Ruby < LanguagePack::Base
   DEFAULT_RUBY_VERSION = "ruby-2.0.0"
   RBX_BASE_URL         = "http://binaries.rubini.us/heroku"
   NODE_BP_PATH         = "vendor/node/bin"
-  ICU4C_VENDOR_PATH    = "icu4c-52.1.0"
+  ICU4C_BASE_URL       = "https://s3.amazonaws.com/frederick-heroku-binaries"
+  ICU4C_VERSION        = "52.1.0"
+  ICU4C_VENDOR_PATH    = "icu4c-#{ICU4C_VERSION}"
 
   # detects if this is a valid Ruby app
   # @return [Boolean] true if it's a Ruby app
@@ -47,6 +49,7 @@ class LanguagePack::Ruby < LanguagePack::Base
     @fetchers[:jvm]    = LanguagePack::Fetcher.new(JVM_BASE_URL)
     @fetchers[:rbx]    = LanguagePack::Fetcher.new(RBX_BASE_URL, @stack)
     @fetchers[:cmake]  = LanguagePack::Fetcher.new(CMAKE_BASE_URL)
+    @fetchers[:icu4c]  = LanguagePack::Fetcher.new(ICU4C_BASE_URL)
     @node_installer    = LanguagePack::NodeInstaller.new(@stack)
   end
 
@@ -853,9 +856,8 @@ params = CGI.parse(uri.query || "")
   end
 
   def install_icu4c
-    dir = File.join('vendor')
-    Dir.chdir(dir) do
-      run("curl #{ICU4C_URL} -s -o - | tar xzf -")
+    Dir.chdir("vendor") do
+      @fetchers[:icu4c].fetch_untar("icu4c-#{ICU4C_VERSION}.tar.gz")
     end
   end
 end
